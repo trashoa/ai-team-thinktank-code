@@ -5,6 +5,7 @@
 
 const feishuNotify = require('./feishu-notify');
 const reviewParser = require('./review-parser');
+const { failureAlertManager } = require('./failure-alert');
 
 /**
  * 主集成函数 - 处理PR审查事件并发送通知
@@ -216,20 +217,20 @@ async function handleOtherReview(reviewResult, options) {
  * 检查失败情况并发送告警
  */
 async function checkForFailures(notificationResult, reviewResult, options) {
-  if (!notificationResult.success && options.enableFeishu) {
-    console.log('检测到通知失败，发送失败告警...');
+  if (!notificationResult.success && options.enableFeishu && config.integration.enableFailureAlert) {
+    console.log('检测到通知失败，使用失败告警管理器处理...');
     
-    const alertMessage = {
-      title: `🚨 PR审查通知发送失败`,
-      content: `**PR**: #${reviewResult.prNumber} - ${reviewResult.prTitle}\n` +
-               `**仓库**: ${reviewResult.repo}\n` +
-               `**失败时间**: ${new Date().toLocaleString()}\n` +
-               `**错误信息**: ${notificationResult.error || '未知错误'}\n` +
-               `**审查状态**: ${reviewResult.state}`,
-      priority: 'error'
+    const reviewContext = {
+      prNumber: reviewResult.prNumber,
+      prTitle: reviewResult.prTitle,
+      repo: reviewResult.repo,
+      state: reviewResult.state,
+      reviewer: reviewResult.reviewer,
+      submittedAt: reviewResult.submittedAt
     };
     
-    await feishuNotify.sendNotification(alertMessage, options.feishuWebhook);
+    // 使用失败告警管理器处理通知失败
+    await failureAlertManager.handleNotificationFailure(notificationResult, reviewContext);
   }
 }
 
@@ -239,16 +240,15 @@ async function checkForFailures(notificationResult, reviewResult, options) {
 async function sendFailureAlert(error, reviewEvent, options) {
   console.log('发送集成失败告警...');
   
-  const alertMessage = {
-    title: `🚨 PR审查通知集成失败`,
-    content: `**错误**: ${error.message}\n` +
-             `**失败时间**: ${new Date().toLocaleString()}\n` +
-             `**事件类型**: ${reviewEvent.action || 'unknown'}\n` +
-             `**建议**: 检查集成配置和网络连接`,
-    priority: 'error'
+  const eventContext = {
+    eventType: 'pull_request_review',
+    action: reviewEvent.action || 'unknown',
+    repo: reviewEvent.repository ? `${reviewEvent.repository.owner.login}/${reviewEvent.repository.name}` : 'unknown',
+    prNumber: reviewEvent.pull_request ? reviewEvent.pull_request.number : 'unknown'
   };
   
-  return await feishuNotify.sendNotification(alertMessage, options.feishuWebhook);
+  // 使用失败告警管理器处理集成错误
+  return await failureAlertManager.handleIntegrationError(error, eventContext);
 }
 
 /**
