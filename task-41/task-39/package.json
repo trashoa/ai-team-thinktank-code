@@ -1,0 +1,32 @@
+{
+  "name": "pr-review-notification-integration",
+  "version": "1.0.0",
+  "description": "GitHub PR审查通知集成到飞书",
+  "main": "integration.js",
+  "scripts": {
+    "start": "node integration.js",
+    "test": "node test-integration.js",
+    "test-feishu": "node test-feishu.js",
+    "test-parser": "node test-parser.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.3.0"
+  },
+  "keywords": [
+    "github",
+    "pr",
+    "review",
+    "notification",
+    "feishu",
+    "integration"
+  ],
+  "author": "Pioneer Hand",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trashoa/ai-team-thinktank-code"
+  }
+}
